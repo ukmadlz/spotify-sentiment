@@ -1,11 +1,16 @@
 <?php
 
-require_once 'lib/EchoNest/Autoloader.php';
+error_reporting(E_ALL);
+
+require_once __DIR__ .'/lib/EchoNest/Autoloader.php';
 EchoNest_Autoloader::register();
 
 $musixapikey = '4cc9e7ad04391df298f95ede0ba7b286';
 
 $email = ($_REQUEST['email'])?$_REQUEST['email']:'mike@elsmore.me';
+
+$start_date = ($_REQUEST['start_date'])?$_REQUEST['start_date']:0;
+$end_date = ($_REQUEST['end_date'])?$_REQUEST['end_date']:time();
 
 $echonest = new EchoNest_Client();
 $echonest->authenticate('R9RBK9MF4OKHSIVRW');
@@ -18,6 +23,8 @@ $dom->loadHTML($html);
 $xpath = new DOMXpath($dom);
 $result = $xpath->query('//div/ul/li/div[@class="media-body"]');
 
+$frequency = 0;
+
 if ($result->length > 0) {
 
 		$lyrics = '';
@@ -26,20 +33,36 @@ if ($result->length > 0) {
 			$trackHtml = $result->item($i)->childNodes;
 
 			$time = $trackHtml->item(0)->textContent;
-			var_dump(substr ( $time, -1));
+			$timeVal = substr ( $time, -1);
+			switch($timeVal) {
+				case "m":
+					$timeDiff = substr ( $time, 0, (strlen($time)-1)) * 60;
+					break;
+				case "h":
+				default:
+					$timeDiff = substr ( $time, 0, (strlen($time)-1)) * 60 * 60;
+					break;
+			}
+			$timestamp = time() - $timeDiff;
 			$artist = $trackHtml->item(1)->textContent;
 			$track = $trackHtml->item(2)->textContent;
 
-			$songApi = $echonest->getSongApi();
-			$songData = $songApi->search(array('title' => $track, 'artist' => $artist,'bucket'=>'id:musixmatch-WW'));
+			if ($timestamp > $start_date && $timestamp < $end_date) {
 
-			$musixMatchData = explode(':', $songData[0]['foreign_ids'][0]['foreign_id']);
+					$songApi = $echonest->getSongApi();
+					$songData = $songApi->search(array('title' => $track, 'artist' => $artist,'bucket'=>'id:musixmatch-WW'));
 
-			$musixMatchId = $musixMatchData[count($musixMatchData)-1];
+					$musixMatchData = explode(':', $songData[0]['foreign_ids'][0]['foreign_id']);
 
-			$musixMatchResponse = json_decode(file_get_contents('http://api.musixmatch.com/ws/1.1/track.lyrics.get?format=json&apikey='.$musixapikey.'&track_id='.$musixMatchId));
+					$musixMatchId = $musixMatchData[count($musixMatchData)-1];
 
-			$lyrics .= $musixMatchResponse->message->body->lyrics->lyrics_body;
+					$musixMatchResponse = json_decode(file_get_contents('http://api.musixmatch.com/ws/1.1/track.lyrics.get?format=json&apikey='.$musixapikey.'&track_id='.$musixMatchId));
+
+					$lyrics .= $musixMatchResponse->message->body->lyrics->lyrics_body;
+
+					$frequency++;
+
+			}
 
 			if($i==19) {
 				break;
@@ -66,8 +89,10 @@ if ($result->length > 0) {
 		curl_setopt($ch,CURLOPT_POSTFIELDS, $fields_string);
 
 		//execute post
-		$result = curl_exec($ch);
+		$result = json_decode(curl_exec($ch));
 
-		var_dump($result);
+		$result->frequency = $frequency;
+    $result->score = $result->value;
+		echo json_encode($result);
 
 }
