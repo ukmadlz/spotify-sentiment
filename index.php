@@ -31,15 +31,15 @@ if ($result->length > 0) {
 			$track = $trackHtml->item(2)->textContent;
 
 			$songApi = $echonest->getSongApi();
-			// $songData = $songApi->search(array('title' => $track, 'artist' => $artist,'bucket'=>'id:musixmatch-WW'));
-			//
-			// $musixMatchData = explode(':', $songData[0]['foreign_ids'][0]['foreign_id']);
-			//
-			// $musixMatchId = $musixMatchData[count($musixMatchData)-1];
-			//
-			// $musixMatchResponse = json_decode(file_get_contents('http://api.musixmatch.com/ws/1.1/track.lyrics.get?format=json&apikey='.$musixapikey.'&track_id='.$musixMatchId));
-			//
-			// $lyrics .= $musixMatchResponse->message->body->lyrics->lyrics_body;
+			$songData = $songApi->search(array('title' => $track, 'artist' => $artist,'bucket'=>'id:musixmatch-WW'));
+
+			$musixMatchData = explode(':', $songData[0]['foreign_ids'][0]['foreign_id']);
+
+			$musixMatchId = $musixMatchData[count($musixMatchData)-1];
+
+			$musixMatchResponse = json_decode(file_get_contents('http://api.musixmatch.com/ws/1.1/track.lyrics.get?format=json&apikey='.$musixapikey.'&track_id='.$musixMatchId));
+
+			$lyrics .= $musixMatchResponse->message->body->lyrics->lyrics_body;
 
 			if($i==19) {
 				break;
